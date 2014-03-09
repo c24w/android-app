@@ -6,8 +6,7 @@ package c24w.x;
 public class CrosswordParser {
 
     public void parse(byte[] data, Callback callback) {
-
-       // callback.success(new int[]{0, 1, 0, 0, 1});
+        callback.success(new Crossword());
     }
 
     interface Callback {

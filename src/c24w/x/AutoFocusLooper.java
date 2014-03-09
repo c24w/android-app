@@ -15,25 +15,32 @@ public class AutoFocusLooper {
         this.camera = camera;
     }
 
+    interface Callback {
+        void autoFocused(boolean success);
+    }
+
     public void stop() {
         autoFocusLoopHandler.removeCallbacks(autoFocusLoopTask);
     }
 
-    public void start(final int loopInterval) {
+    public void start(final int loopInterval, final Callback callback) {
         autoFocusLoopHandler = new Handler();
         autoFocusLoopTask = new Runnable() {
             @Override
             public void run() {
-                autoFocus(camera, loopInterval);
+                autoFocus(camera, loopInterval, callback);
             }
         };
-        autoFocus(camera, loopInterval);
+        autoFocus(camera, loopInterval, callback);
     }
 
-    private void autoFocus(Camera camera, final int loopInterval) {
+    private void autoFocus(Camera camera, final int loopInterval, final Callback callback) {
         camera.autoFocus(new Camera.AutoFocusCallback() {
             @Override
-            public void onAutoFocus(boolean b, final Camera camera) {
+            public void onAutoFocus(boolean success, final Camera camera) {
+                callback.autoFocused(success);
+
+                // Schedule next auto-autoFocus
                 autoFocusLoopHandler.postDelayed(autoFocusLoopTask, loopInterval);
             }
         });

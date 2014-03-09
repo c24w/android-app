@@ -14,53 +14,28 @@ import java.io.IOException;
  */
 public class ScannerView extends SurfaceView {
 
-    private Callback scanDataCallback;
-
     public ScannerView(Context context) {
         super(context);
-        init();
     }
 
     public ScannerView(Context context, AttributeSet attrs) {
         super(context, attrs);
-        init();
     }
 
     public ScannerView(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
-        init();
     }
 
-    public void init() {
-        if (getHolder() != null) {
-            getHolder().addCallback(bindToCamera());
-        }
-    }
-
-    private Camera configureCamera() {
-        Camera camera = Camera.open();
-        if (camera != null) {
-            Camera.Parameters params = camera.getParameters();
-            camera.setDisplayOrientation(90);
-
-            params.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
-
-            camera.setParameters(params);
-        }
-        return camera;
-    }
-
-    private SurfaceHolder.Callback bindToCamera() {
+    private SurfaceHolder.Callback bindToCamera(final ScannerCamera scannerCamera) {
         return new SurfaceHolder.Callback() {
+
             private Camera camera;
-            private AutoFocusLooper autoFocusLooper;
 
             @Override
             public void surfaceCreated(SurfaceHolder surfaceHolder) {
-                camera = configureCamera();
-                autoFocusLooper = new AutoFocusLooper(camera);
-                attachCamera(camera, surfaceHolder);
-                autoFocusLooper.start(2000);
+                camera = scannerCamera.configureCamera();
+                attachCamera(surfaceHolder);
+                scannerCamera.init();
             }
 
             @Override
@@ -69,11 +44,10 @@ public class ScannerView extends SurfaceView {
 
             @Override
             public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
-                autoFocusLooper.stop();
                 detachCamera();
             }
 
-            private void attachCamera(Camera camera, SurfaceHolder surfaceHolder) {
+            private void attachCamera(SurfaceHolder surfaceHolder) {
                 try {
                     camera.setPreviewDisplay(surfaceHolder);
                 } catch (IOException e) {
@@ -82,13 +56,14 @@ public class ScannerView extends SurfaceView {
                 camera.startPreview();
                 camera.setPreviewCallback(new Camera.PreviewCallback() {
                     @Override
-                    public void onPreviewFrame(byte[] bytes, Camera camera) {
-                        scanDataCallback.onData(bytes);
+                    public void onPreviewFrame(byte[] data, Camera camera) {
+                        scannerCamera.triggerPreviewFrame(data);
                     }
                 });
             }
 
             private void detachCamera() {
+                scannerCamera.release();
                 camera.stopPreview();
                 camera.setPreviewCallback(null);
                 camera.cancelAutoFocus();
@@ -98,23 +73,9 @@ public class ScannerView extends SurfaceView {
         };
     }
 
-    interface Callback {
-        void onData(byte[] data);
+    public void attachCamera(ScannerCamera camera) {
+        if (getHolder() != null) {
+            getHolder().addCallback(bindToCamera(camera));
+        }
     }
-
-    public void setCallback(Callback callback) {
-        this.scanDataCallback = callback;
-    }
-
-    private Camera.PreviewCallback handleCameraData() {
-        return new Camera.PreviewCallback() {
-            @Override
-            public void onPreviewFrame(byte[] data, Camera camera) {
-                if (scanDataCallback != null) {
-                    scanDataCallback.onData(data);
-                }
-            }
-        };
-    }
-
 }

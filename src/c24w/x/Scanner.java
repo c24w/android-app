@@ -2,42 +2,50 @@ package c24w.x;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.widget.Toast;
+import android.util.Log;
 
 /**
  * Created by Chris on 08/03/14.
  */
 public class Scanner extends Activity {
 
-    private CrosswordParser crosswordParser;
-    private ScannerView scannerView;
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.scanner);
 
-        crosswordParser = new CrosswordParser();
+        ScannerView scannerView = (ScannerView) findViewById(R.id.scanner_view);
 
-        scannerView = (ScannerView) findViewById(R.id.scanner_view);
-        scannerView.setCallback(handlePixelData());
-    }
+        ScannerCamera scannerCamera = new ScannerCamera();
 
-    private ScannerView.Callback handlePixelData() {
-        return new ScannerView.Callback() {
+        scannerCamera.on(new ScannerCamera.Callback() {
+            private CrosswordParser crosswordParser = new CrosswordParser();
+            private byte[] currentPreviewData;
+
             @Override
-            public void onData(byte[] data) {
-                crosswordParser.parse(data, handleSuccessfulParse());
+            public void autoFocus(boolean success) {
+                if (success) {
+                    Log.v("___", "successful auto focus");
+                    crosswordParser.parse(currentPreviewData, handleParsedCrossword());
+                }
             }
-        };
-    }
 
-    private CrosswordParser.Callback handleSuccessfulParse() {
-        return new CrosswordParser.Callback() {
             @Override
-            public void success(Crossword crossword) {
-                Toast.makeText(Scanner.this, "Successful parse", Toast.LENGTH_SHORT).show();
+            public void previewFrame(byte[] data) {
+                currentPreviewData = data;
             }
-        };
+
+            private CrosswordParser.Callback handleParsedCrossword() {
+                return new CrosswordParser.Callback() {
+                    @Override
+                    public void success(Crossword crossword) {
+                        Log.v("___", "parsed crossword");
+                    }
+                };
+            }
+        });
+
+        scannerView.attachCamera(scannerCamera);
     }
 }
+
